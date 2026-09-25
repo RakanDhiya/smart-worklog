@@ -66,7 +66,6 @@
                 </p>
 
 
-                {{-- Dashboard --}}
                 <a href="{{ route('dashboard') }}"
                     class="flex items-center gap-3
                            px-3 py-2.5
