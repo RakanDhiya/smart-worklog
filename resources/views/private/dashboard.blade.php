@@ -20,8 +20,6 @@
                    flex-col
                    border-r border-slate-200
                    bg-white">
-
-            {{-- Brand --}}
             <div
                 class="h-16
                        flex items-center
