@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Dashboard | Smart Worklog</title>
-
-    {{-- Tailwind CSS --}}
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -22,8 +20,6 @@
                    flex-col
                    border-r border-slate-200
                    bg-white">
-
-            {{-- Brand --}}
             <div
                 class="h-16
                        flex items-center
