@@ -3,6 +3,7 @@
 use App\Models\Account;
 use App\Models\User;
 
+
 return [
 
     /*
@@ -65,7 +66,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => Account::class,
+            'model' => User::class,
         ],
     ],
 
