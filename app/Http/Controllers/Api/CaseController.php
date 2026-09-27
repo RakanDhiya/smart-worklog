@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCaseRequest;
 use App\Http\Requests\UpdateCaseRequest;
 use App\Http\Resources\CaseResource;
+use App\Http\Responses\CommonResponse;
+use App\Http\Responses\PaginationResponse;
 use App\Models\CaseModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CaseController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $query = CaseModel::query()
             ->with([
@@ -21,28 +23,25 @@ class CaseController extends Controller
             ]);
 
         if ($request->filled('search')) {
-            $search = $request->string('search');
-
+            $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('case_number', 'like', "%{$search}%")
-                    ->orWhere('title', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('status', 'like', "%{$search}%")
-                    ->orWhere('priority', 'like', "%{$search}%");
+                $q->where('case_number', 'ilike', "%{$search}%")
+                    ->orWhere('title', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%");
             });
         }
 
         if ($request->filled('status')) {
             $query->where(
                 'status',
-                $request->string('status')
+                $request->input('status')
             );
         }
 
         if ($request->filled('priority')) {
             $query->where(
                 'priority',
-                $request->string('priority')
+                $request->input('priority')
             );
         }
 
@@ -55,15 +54,8 @@ class CaseController extends Controller
             'updated_at',
         ];
 
-        $sort = $request->get(
-            'sort',
-            'created_at'
-        );
-
-        $direction = $request->get(
-            'direction',
-            'desc'
-        );
+        $sort = $request->input('sort', 'created_at');
+        $direction = $request->input('direction', 'desc');
 
         if (! in_array($sort, $allowedSorts, true)) {
             $sort = 'created_at';
@@ -73,85 +65,57 @@ class CaseController extends Controller
             $direction = 'desc';
         }
 
-        $query->orderBy(
-            $sort,
-            $direction
-        );
-
-        $perPage = min(
-            max(
-                (int) $request->get('per_page', 15),
-                1
-            ),
-            100
-        );
+        $query->orderBy($sort, $direction);
+        $perPage = min(max((int) $request->input('limit', 15), 1), 100);
 
         $cases = $query->paginate($perPage);
 
-        return CaseResource::collection($cases);
+        return PaginationResponse::success(
+            'Cases retrieved successfully.',
+            CaseResource::collection($cases->items()),
+            $cases->currentPage(),
+            $cases->perPage(),
+            $cases->total()
+        );
     }
 
     public function store(
         StoreCaseRequest $request
-    ): CaseResource {
+    ): JsonResponse {
         $validated = $request->validated();
-
         $picIds = $validated['pic_ids'] ?? [];
         $memberIds = $validated['member_ids'] ?? [];
-
-        unset(
-            $validated['pic_ids'],
-            $validated['member_ids']
-        );
+        unset($validated['pic_ids'], $validated['member_ids']);
 
         $case = CaseModel::create($validated);
-
         $case->pics()->sync($picIds);
         $case->members()->sync($memberIds);
-
         $case->load([
             'pics.user',
             'members.user',
         ]);
 
-        return new CaseResource($case);
+        return CommonResponse::success('Case created successfully.', new CaseResource($case), 201);
     }
 
-    public function show(
-        CaseModel $case
-    ): CaseResource {
+    public function show(CaseModel $case): JsonResponse
+    {
         $case->load([
             'pics.user',
             'members.user',
         ]);
 
-        return new CaseResource($case);
+        return CommonResponse::success('Case retrieved successfully.', new CaseResource($case));
     }
 
-    public function update(
-        UpdateCaseRequest $request,
-        CaseModel $case
-    ): CaseResource {
+    public function update(UpdateCaseRequest $request,        CaseModel $case): JsonResponse
+    {
         $validated = $request->validated();
-
-        $hasPics = array_key_exists(
-            'pic_ids',
-            $validated
-        );
-
-        $hasMembers = array_key_exists(
-            'member_ids',
-            $validated
-        );
-
+        $hasPics = array_key_exists('pic_ids', $validated);
+        $hasMembers = array_key_exists('member_ids', $validated);
         $picIds = $validated['pic_ids'] ?? [];
         $memberIds = $validated['member_ids'] ?? [];
-
-        unset(
-            $validated['pic_ids'],
-            $validated['member_ids']
-        );
-
+        unset($validated['pic_ids'], $validated['member_ids']);
         $case->update($validated);
 
         if ($hasPics) {
@@ -167,16 +131,12 @@ class CaseController extends Controller
             'members.user',
         ]);
 
-        return new CaseResource($case);
+        return CommonResponse::success('Case updated successfully.', new CaseResource($case));
     }
 
-    public function destroy(
-        CaseModel $case
-    ): JsonResponse {
+    public function destroy(CaseModel $case): JsonResponse
+    {
         $case->delete();
-
-        return response()->json([
-            'message' => 'Case deleted successfully.',
-        ]);
+        return CommonResponse::success('Case deleted successfully.');
     }
 }

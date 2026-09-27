@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Responses\CommonResponse;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,20 +40,15 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
         ]);
-
         Auth::login($user);
 
         $request->session()->regenerate();
-
         $user->load([
             'role',
             'employee',
         ]);
 
-        return response()->json([
-            'message' => 'Registration successful.',
-            'user' => $user,
-        ], 201);
+        return CommonResponse::success('Registration successful.', $user, 201);
     }
 
     public function login(Request $request): JsonResponse
@@ -71,33 +67,24 @@ class AuthController extends Controller
                 'boolean',
             ],
         ]);
-
         $remember = $validated['remember'] ?? false;
 
-        $credentials = [
+        if (! Auth::attempt([
             'email' => $validated['email'],
             'password' => $validated['password'],
-        ];
-
-        if (! Auth::attempt($credentials, $remember)) {
+        ], $remember)) {
             throw ValidationException::withMessages([
-                'email' => [
-                    'The provided credentials are incorrect.',
-                ],
+                'credentials' => ['Invalid credentials.'],
             ]);
         }
 
         $request->session()->regenerate();
-
         $user = $request->user()->load([
             'role',
             'employee',
         ]);
 
-        return response()->json([
-            'message' => 'Login successful.',
-            'user' => $user,
-        ]);
+        return CommonResponse::success('Login successful.', $user);
     }
 
     public function user(Request $request): JsonResponse
@@ -107,20 +94,15 @@ class AuthController extends Controller
             'employee',
         ]);
 
-        return response()->json([
-            'user' => $user,
-        ]);
+        return CommonResponse::success('User retrieved successfully.', $user);
     }
 
     public function logout(Request $request): JsonResponse
     {
         Auth::guard('web')->logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return response()->json([
-            'message' => 'Logout successful.',
-        ]);
+        return CommonResponse::success('Logout successful.');
     }
 }
